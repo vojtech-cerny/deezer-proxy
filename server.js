@@ -1,23 +1,24 @@
 import express from "express";
 import axios from "axios";
-import cors from "cors";
 
 const app = express();
-app.use(cors());
+const DEEZER_BASE = "https://api.deezer.com";
 
-app.get("/track", async (req, res) => {
-  const { track, artist } = req.query;
-  if (!track || !artist) return res.status(400).json({ error: "track and artist required" });
+app.get("/ping", (req, res) => res.send({ status: "ok" }));
 
+app.get("/*", async (req, res) => {
   try {
-    const { data } = await axios.get(
-      `https://api.deezer.com/search?q=${encodeURIComponent(`track:"${track}" artist:"${artist}"`)}`
-    );
+    const path = req.params[0];
+    const query = new URLSearchParams(req.query).toString();
+    const url = `${DEEZER_BASE}/${path}?${query}`;
+
+    // Fetch Deezer
+    const { data } = await axios.get(url);
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(err.response?.status || 500).json({ error: err.message });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Proxy server running on port ${PORT}`));
