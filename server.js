@@ -1,24 +1,37 @@
-import express from "express";
-import axios from "axios";
+import http from "http";
+import https from "https";
+import { URL } from "url";
 
-const app = express();
 const DEEZER_BASE = "https://api.deezer.com";
 
-app.get("/ping", (req, res) => res.send({ status: "ok" }));
+const server = http.createServer((req, res) => {
+  if (req.url === "/ping") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ status: "ok" }));
+    return;
+  }
 
-app.get("/*", async (req, res) => {
   try {
-    const path = req.params[0];
-    const query = new URLSearchParams(req.query).toString();
-    const url = `${DEEZER_BASE}/${path}?${query}`;
+    // Build Deezer URL
+    const url = new URL(DEEZER_BASE + req.url);
 
-    // Fetch Deezer
-    const { data } = await axios.get(url);
-    res.json(data);
+    https.get(url, (deezerRes) => {
+      let data = "";
+      deezerRes.on("data", chunk => (data += chunk));
+      deezerRes.on("end", () => {
+        res.writeHead(deezerRes.statusCode, { "Content-Type": "application/json" });
+        res.end(data);
+      });
+    }).on("error", (err) => {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: err.message }));
+    });
+
   } catch (err) {
-    res.status(err.response?.status || 500).json({ error: err.message });
+    res.writeHead(400, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: err.message }));
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Proxy server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Proxy running on port ${PORT}`));
