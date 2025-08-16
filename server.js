@@ -5,6 +5,18 @@ import { URL } from "url";
 const DEEZER_BASE = "https://api.deezer.com";
 
 const server = http.createServer((req, res) => {
+  // Minimal CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // Handle preflight request
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
   if (req.url === "/ping") {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ status: "ok" }));
@@ -12,7 +24,6 @@ const server = http.createServer((req, res) => {
   }
 
   try {
-    // Build Deezer URL
     const url = new URL(DEEZER_BASE + req.url);
 
     https.get(url, (deezerRes) => {
